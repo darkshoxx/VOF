@@ -14,23 +14,7 @@
  */
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+#include <stdio.h>
 
 #include "frotz.h"
 
@@ -163,6 +147,9 @@ void z_piracy (void)
 
 int cdecl main (int argc, char *argv[])
 {
+    setvbuf(stdout, NULL, _IONBF, 0);
+    setvbuf(stdin, NULL, _IONBF, 0);
+
 
     os_process_arguments (argc, argv);
 

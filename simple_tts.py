@@ -1,12 +1,19 @@
+import warnings
+warnings.filterwarnings("ignore")
 import torch
 from TTS.api import TTS
 import sounddevice as sd
 import numpy as np
-import librosa
-tts = TTS(
-    model_name="tts_models/en/ljspeech/vits",
-    gpu=True
-)
+# import librosa
+from contextlib import redirect_stdout
+import os
+with open(os.devnull, 'w') as devnull:
+    with redirect_stdout(devnull):
+        tts = TTS(
+            model_name="tts_models/en/ljspeech/vits",
+            gpu=True
+        )
+
 text = "Welcome to Zork. You are standing in an open field west of a white house with a boarded front door."
 
 import numpy as np
@@ -44,17 +51,19 @@ def speak(text: str):
     # Generate waveform as a numpy array
     if text:
         try:
-            wav = tts.tts(text)
-            wav = np.array(wav, dtype=np.float32)
+            with open(os.devnull, 'w') as devnull:
+                with redirect_stdout(devnull):
+                    wav = tts.tts(text)
+                    wav = np.array(wav, dtype=np.float32)
 
-            speed = 1.15  # 2x faster
-            indices = np.arange(0, len(wav), speed)
-            wav_fast = wav[indices.astype(int)]
+                    speed = 1.15  # 2x faster
+                    indices = np.arange(0, len(wav), speed)
+                    wav_fast = wav[indices.astype(int)]
 
-            sd.play(wav_fast, samplerate=tts.synthesizer.output_sample_rate)
-            sd.wait()
+                    sd.play(wav_fast, samplerate=tts.synthesizer.output_sample_rate)
+                    sd.wait()
         except IndexError:
-            print("NEXT ATTEMPT")
+            # print("NEXT ATTEMPT")
             speak(text)
 
 if __name__ == "__main__":

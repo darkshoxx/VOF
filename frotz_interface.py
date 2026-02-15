@@ -1,6 +1,5 @@
 from pathlib import Path
-from subprocess import Popen, PIPE, run, STDOUT, CREATE_NEW_CONSOLE
-import os, time, re, string, soundfile, sounddevice
+import time, re, string, soundfile, sounddevice
 from winpty import PtyProcess
 from simple_tts import speak
 from simple_stt import transcribe
@@ -43,9 +42,13 @@ norm_dict = {
     "feast": "east",
     "mouth": "south",
     "south east": "southeast",
+    "south west": "southwest",
+    "north east": "northeast",
+    "north west": "northwest",
     # Misc
     "back": "bag",
     "jealous": "chalice",
+    "boats": "boat",
 }
 
 number_list = ["1", "one", "2", "two", "3", "three", "4", "four", "5", "five", "6", "six", "7", "seven", "8", "eight", "9", "nine", "10", "ten",]
@@ -80,7 +83,7 @@ def zork_test():
         sounddevice.play(0.1*bell, 48000)
         sounddevice.wait() 
         result = transcribe(duration=1)
-        print(result)
+        # print(result)
         clean_result = clean_shoxx(result, more = " ")
         if clean_result.lower() in norm_dict:
             clean_result = norm_dict[clean_result.lower()]
@@ -103,7 +106,7 @@ def zork_test():
             sounddevice.play(0.1*gong, 48000)
             sounddevice.wait() 
             result = transcribe(duration=1)
-            print(result)
+            # print(result)
             clean_result = clean_shoxx(result, more = " ")
             if clean_result.lower() == "directions":
                 sounddevice.play(0.1*gong, 48000)
@@ -111,7 +114,7 @@ def zork_test():
                 the_text = transcribe(duration=5)
                 clean_directions = clean_shoxx(the_text, more = "").lower()
                 directions_list = clean_directions.split(" ")[1:]
-                print(directions_list)
+                print("Loop: " + " ".join(directions_list))
                 for i, direction in enumerate(directions_list):
                     if direction in norm_dict:
                         directions_list[i] = norm_dict[direction]
@@ -170,6 +173,21 @@ def trim_to_moves_2(text: str) -> str:
 # Start the PTY process
 proc = PtyProcess.spawn([str(FROTZ), str(ZORK)])
 
+def normalize_terminal_output(text: str) -> str:
+    return text.replace("\r", "") + "\n\n"
+    # lines = []
+    # current_line = ""
+
+    # for part in text.split("\n"):
+    #     if "\r" in part:
+    #         segments = part.split("\r")
+    #         current_line = segments[-1]  # last overwrite wins
+    #     else:
+    #         current_line = part
+    #     lines.append(current_line)
+
+    # return "\n".join(lines)
+
 # Small helper to read available output
 def read_available():
     output = ""
@@ -178,7 +196,7 @@ def read_available():
         try:
             chunk = proc.read(91024)
             if not chunk:
-                print("noChunk")
+                # print("noChunk")
                 break
             output += chunk
             if "\r\n\r\n>" in output.lower():  # crude stop condition for demo
@@ -191,41 +209,46 @@ def read_available():
                 break
             elif "***more***" in output.lower():
                 break
-            elif "quit):*" in output.lower():
+            elif "quit):" in output.lower():
                 break
 
             if time.time() - start>10:
-                print("Timeout")
+                # print("Timeout")
                 break
         except EOFError:
-            print("EOFError")
+            # print("EOFError")
             break
         except OSError:
-            print("OSError")
+            # print("OSError")
             break
     return output
 
 # Read initial banner
 time.sleep(0.2)
 initial = read_available()
+# print(initial)
+print(normalize_terminal_output(initial))
+
 trimmed_initial = trim_to_moves_2(clean_text(initial))
-print("INITIAL OUTPUT:")
-print(trimmed_initial)
+# print("INITIAL OUTPUT:")
 speak_clean(trimmed_initial)
 while True:
 
     # Send a command
     command = zork_test()
-    print("Responding: ", command )
+    # print("Responding: ", command )
     san_command = mini_sanitize(command)
+    print(san_command)
     proc.write(san_command + "\r")
 
     time.sleep(0.2)
     response = read_available()
-    print("Z:", response)
+    # print("Z:", response)
+    # print(response)
+    print(normalize_terminal_output(response), end="", flush=True)
+    
     trimmed_response = trim_to_moves(clean_text(response))
-    print("RESPONSE:")
-    print(trimmed_response)
+    # print("RESPONSE:")
     speak_clean(trimmed_response)
 
 proc.close()

@@ -41,7 +41,7 @@ def change_speed_preserve_pitch(wav: np.ndarray, speed: float):
     return resampled.astype(np.float32)
 
 
-def speak(text: str):
+def speak(text: str, volume = 0.1):
     """
     Generate TTS for the given text and play it immediately.
     
@@ -60,11 +60,13 @@ def speak(text: str):
                     indices = np.arange(0, len(wav), speed)
                     wav_fast = wav[indices.astype(int)]
 
-                    sd.play(wav_fast, samplerate=tts.synthesizer.output_sample_rate)
+                    sd.play(volume*wav_fast, samplerate=tts.synthesizer.output_sample_rate)
                     sd.wait()
         except IndexError:
             # print("NEXT ATTEMPT")
             speak(text)
+        except UnicodeEncodeError:
+            pass
 
 if __name__ == "__main__":
     ending = """Inside the Barrow

@@ -6,7 +6,7 @@ from simple_stt import transcribe
 HERE = Path(__file__).parent
 ZORK = HERE / "zork1.z3"
 FROTZ = HERE / "dumb-frotz.exe"
-
+volume = 0.1
 # Audio Mini Setup
 STATIC = HERE / "static"
 BELL = STATIC / "bell_02.ogg"
@@ -41,6 +41,7 @@ norm_dict = {
     # Directions:
     "feast": "east",
     "mouth": "south",
+    "self": "south",
     "south east": "southeast",
     "south west": "southwest",
     "north east": "northeast",
@@ -123,7 +124,8 @@ def zork_test():
                     for direction in directions_list[:-1]:
                         proc.write(direction + "\r")
                         read_available()
-                    return directions_list[-1]                 
+                    if directions_list:
+                        return directions_list[-1]                 
 
             elif clean_result.lower() in number_list:
                 sounddevice.play(0.1*gong, 48000)
@@ -137,6 +139,14 @@ def zork_test():
                     proc.write("g" + "\r")
                     read_available()
                 return "g"
+        # elif clean_result.lower() == "volume":
+        #     sounddevice.play(0.1*gong, 48000)
+        #     sounddevice.wait() 
+        #     result = transcribe(duration=1)
+        #     clean_result = clean_shoxx(result, more = " ")
+        #     if clean_result.lower() == "quiet":
+        #         global volume
+        #         volume = 0.1
 
 
 ansi_escape = re.compile(r'\x1B\[[0-?]*[ -/]*[@-~]')
@@ -144,7 +154,7 @@ def clean_text(text: str) -> str:
     return ansi_escape.sub('', text)
 
 def speak_clean(message: str) -> None:
-    speak(clean_text(message))
+    speak(clean_text(message), volume)
 
 def mini_sanitize(command: str) -> str:
     if command:
@@ -174,7 +184,7 @@ def trim_to_moves_2(text: str) -> str:
 proc = PtyProcess.spawn([str(FROTZ), str(ZORK)])
 
 def normalize_terminal_output(text: str) -> str:
-    return text.replace("\r", "") + "\n\n"
+    return text.replace("\r", "") #+ "\n\n"
     # lines = []
     # current_line = ""
 
@@ -223,32 +233,39 @@ def read_available():
             break
     return output
 
+print("\n"*50)
+
 # Read initial banner
 time.sleep(0.2)
 initial = read_available()
 # print(initial)
+lineskips = initial.count("\r\n")
+print("\n"*(lineskips + 20))
 print(normalize_terminal_output(initial))
-
 trimmed_initial = trim_to_moves_2(clean_text(initial))
 # print("INITIAL OUTPUT:")
 speak_clean(trimmed_initial)
+command = zork_test()
+print("\n"*5)
 while True:
 
     # Send a command
-    command = zork_test()
     # print("Responding: ", command )
     san_command = mini_sanitize(command)
-    print(san_command)
+    # print(san_command)
     proc.write(san_command + "\r")
 
     time.sleep(0.2)
     response = read_available()
     # print("Z:", response)
     # print(response)
-    print(normalize_terminal_output(response), end="", flush=True)
+    lineskips = response.count("\r\n")
+    print("\n"*(lineskips + 2))
+    print(normalize_terminal_output(response)) #, end="", flush=True)
     
     trimmed_response = trim_to_moves(clean_text(response))
     # print("RESPONSE:")
     speak_clean(trimmed_response)
+    command = zork_test()
 
 proc.close()
